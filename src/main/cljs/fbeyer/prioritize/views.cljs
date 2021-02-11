@@ -31,7 +31,7 @@
     [:div
      [:h1 "Hello from " @name]
      (case @panel
-       :edit-choices [choices-panel]
+       :choices [choices-panel]
        :prompt [prompt-panel]
        [:em (str "Error: Invalid Panel" @panel)])
      ]))

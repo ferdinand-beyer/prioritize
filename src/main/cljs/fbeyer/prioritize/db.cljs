@@ -2,14 +2,14 @@
 
 (def default-db
   {:name "re-frame"
-   :panel :edit-choices
+   :panel :choices
    :choices ["Acceptance"
              "Curiosity"
              "Freedom"
              "Goal"
-             #_"Honor"
-             #_"Mastery"
-             #_"Order"
+             "Honor"
+             "Mastery"
+             "Order"
              "Power"
-             #_"Relatedness"
-             #_"Status"]})
+             "Relatedness"
+             "Status"]})
