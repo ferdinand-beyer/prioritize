@@ -1,0 +1,4 @@
+(ns fbeyer.prioritize.db)
+
+(def default-db
+  {:name "re-frame"})
