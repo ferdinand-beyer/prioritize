@@ -4,7 +4,8 @@
   "src/test"]
 
  :dependencies
- [[re-frame "1.1.2"]]
+ [[re-frame "1.1.2"]
+  [org.clojars.fbeyer/mui-bien "0.1.0-SNAPSHOT"]]
 
  :builds
  {:app
