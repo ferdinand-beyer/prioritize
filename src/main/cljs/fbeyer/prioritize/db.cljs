@@ -1,8 +1,7 @@
 (ns fbeyer.prioritize.db)
 
 (def default-db
-  {:name "re-frame"
-   :panel :choices
+  {:panel :choices
    :choices ["Acceptance"
              "Curiosity"
              "Freedom"

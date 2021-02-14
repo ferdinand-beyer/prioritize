@@ -33,30 +33,29 @@
  (fn [db [_ left right]]
    (assoc db :prompt [left right])))
 
-(defn- interactive-pick
-  "Asynchronously asks the user to pick between a number of choices."
-  [response-ch in out]
+(defn- run-caching-pick
+  "Runs an asynchronous proceess that delegates deciding between choices using
+  pick-ch, and caches results."
+  [ch pick-ch]
   (async/go-loop
    [cache {}]
-    (when-let [choices (async/<! in)]
+    (when-let [choices (async/<! ch)]
       (let [cache-key (sort choices)
             [pick cache]
             (if-let [pick (get cache cache-key)]
               [pick cache]
               (do
-                ; TODO: Move this behind a channel, then the prioritization logic
-                ; can stay independent of re-frame!
-                (re-frame/dispatch (apply vector ::prompt choices))
-                (let [pick (async/<! response-ch)]
+                (async/>! pick-ch choices)
+                (when-let [pick (async/<! pick-ch)]
                   [pick (assoc cache cache-key pick)])))]
-        (when (async/>! out pick)
-          #_(println "Picked:" pick "from" choices "- Cache:" cache)
-          (recur cache))))))
+        (async/>! ch pick)
+        #_(println "Picked:" pick "from" choices "- Cache:" cache)
+        (recur cache)))))
 
-(defn- prioritize
-  "Prioritize choices using pick-ch to interactively pick the item with
-   higher priority."
-  [choices pick-ch]
+(defn- prioritize-async
+  "Run an asynchronous process that prioritizes choices, using ch to
+  delegate decisions."
+  [choices ch]
   (async/go-loop
    [remaining (set choices)
     ordered []]
@@ -70,8 +69,8 @@
                                         [(last choices)]
                                         [])
                               [pair & rest] (partition 2 choices)]
-                         (async/>! pick-ch pair)
-                         (when-let [winner (async/<! pick-ch)]
+                         (async/>! ch pair)
+                         (when-let [winner (async/<! ch)]
                            (let [winners (conj winners winner)]
                              (if rest
                                (recur winners rest)
@@ -82,11 +81,28 @@
       (recur (disj remaining winner) (conj ordered winner))
       ordered)))
 
+(defn- run-interactive-pick
+  "Runs an asynchronous process that repeatedly reads choices from ch,
+  dispatches them as a re-frame event to present them to the user,
+  reads the result from result-ch, and forwards it back to ch."
+  [ch result-ch]
+  (async/go-loop
+   []
+   (when-let [choices (async/<! ch)]
+     (re-frame/dispatch (apply vector ::prompt choices))
+     (when-let [pick (async/<! result-ch)]
+       (async/>! ch pick)
+       (recur)))))
+
 (defn run-prioritization [choices ch]
   (let [pick-ch (async/chan)
-        _ (interactive-pick ch pick-ch pick-ch)
-        prio-ch (prioritize choices pick-ch)]
-    (async/go (re-frame/dispatch [::prioritization-completed (async/<! prio-ch)]))))
+        cache-ch (async/chan)
+        _ (run-interactive-pick pick-ch ch)
+        _ (run-caching-pick cache-ch pick-ch)
+        prio-ch (prioritize-async choices cache-ch)]
+    (async/go
+     (when-let [result (async/<! prio-ch)]
+       (re-frame/dispatch [::prioritization-completed result])))))
 
 ;; TODO: Is that a co-effect?
 (def prio-channel (atom nil))

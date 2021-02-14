@@ -26,10 +26,9 @@
         [:li [:button {:on-click #(re-frame/dispatch [::e/alternative-chosen right])} right]]])]))
 
 (defn main-panel []
-  (let [name (re-frame/subscribe [::subs/name])
-        panel (re-frame/subscribe [::subs/active-panel])]
+  (let [panel (re-frame/subscribe [::subs/active-panel])]
     [:div
-     [:h1 "Hello from " @name]
+     [:h1 "Prioritize!"]
      (case @panel
        :choices [choices-panel]
        :prompt [prompt-panel]
